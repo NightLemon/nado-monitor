@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nado-telemetry"
+version = "0.1.0"
+description = "Telemetry client for Nado Monitor"
+requires-python = ">=3.10"
+dependencies = [
+    "psutil>=6.0.0",
+    "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+toml = ["tomli>=2.0.0"]
+
+[project.scripts]
+nado-telemetry = "nado_telemetry.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,14 @@
+# Nado Monitor Telemetry Client Configuration
+
+server_url = "http://localhost:8000"
+api_key = "change-me-in-production"
+
+# Machine identification (leave empty for auto-detect)
+machine_name = ""
+os_type = ""
+
+# Collection interval in seconds
+interval_seconds = 30
+
+# Processes to monitor (matched against process name and command line)
+monitored_processes = ["claude", "node", "python", "code", "cursor", "docker"]

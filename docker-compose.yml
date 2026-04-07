@@ -1,0 +1,14 @@
+services:
+  monitor:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      API_KEY: ${API_KEY:-change-me}
+      DATABASE_URL: sqlite:///./data/nado_monitor.db
+      CORS_ORIGINS: "*"
+    volumes:
+      - monitor_data:/app/data
+
+volumes:
+  monitor_data:

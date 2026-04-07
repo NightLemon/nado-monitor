@@ -1,0 +1,18 @@
+[Unit]
+Description=Nado Monitor Telemetry Client
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/opt/nado-monitor/client
+ExecStart=/opt/nado-monitor/venv/bin/nado-telemetry -c /opt/nado-monitor/client/config.toml
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=NADO_SERVER_URL=http://your-server:8000
+Environment=NADO_API_KEY=change-me-in-production
+
+[Install]
+WantedBy=multi-user.target
