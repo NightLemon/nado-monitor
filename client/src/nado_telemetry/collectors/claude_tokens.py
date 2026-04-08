@@ -23,8 +23,24 @@ def _save_offsets(offsets: dict[str, int]):
         logger.warning("Failed to save state file")
 
 
+def _to_non_neg_int(val) -> int:
+    """Coerce value to a non-negative integer (matches pew's toNonNegInt)."""
+    if val is None:
+        return 0
+    try:
+        n = int(val)
+        return n if n > 0 else 0
+    except (TypeError, ValueError):
+        return 0
+
+
 def _scan_jsonl(file_path: Path, offset: int) -> tuple[list[dict], int]:
     """Read new lines from a JSONL file starting at byte offset.
+    Matches @nocoo/pew's parseClaudeFile logic:
+    - No role filtering; any line with usage + model + timestamp is counted
+    - usage from obj.message.usage OR obj.usage
+    - model from obj.message.model OR obj.model
+    - Skip zero-delta entries
     Returns (entries, new_offset)."""
     entries = []
     try:
@@ -41,25 +57,41 @@ def _scan_jsonl(file_path: Path, offset: int) -> tuple[list[dict], int]:
                 line = line.strip()
                 if not line:
                     continue
+                # Fast-path: skip lines without "usage" (matches pew)
+                if '"usage"' not in line:
+                    continue
                 try:
                     data = json.loads(line)
                 except json.JSONDecodeError:
                     # Possibly a partial write — stop here, retry next cycle
                     break
 
-                msg = data.get("message", {})
-                usage = msg.get("usage")
-                # Skip sidechain (subagent) entries to avoid double-counting
-                if data.get("isSidechain"):
+                msg = data.get("message") or {}
+                usage = msg.get("usage") or data.get("usage")
+                if not usage:
                     continue
-                if msg.get("role") == "assistant" and usage:
-                    entries.append({
-                        "input_tokens": usage.get("input_tokens") or 0,
-                        "output_tokens": usage.get("output_tokens") or 0,
-                        "cache_creation_tokens": usage.get("cache_creation_input_tokens") or 0,
-                        "cache_read_tokens": usage.get("cache_read_input_tokens") or 0,
-                        "model": msg.get("model") or "unknown",
-                    })
+
+                model = msg.get("model") or data.get("model")
+                timestamp = data.get("timestamp")
+                if not model or not timestamp:
+                    continue
+
+                input_tokens = _to_non_neg_int(usage.get("input_tokens"))
+                output_tokens = _to_non_neg_int(usage.get("output_tokens"))
+                cache_creation = _to_non_neg_int(usage.get("cache_creation_input_tokens"))
+                cache_read = _to_non_neg_int(usage.get("cache_read_input_tokens"))
+
+                # Skip zero-delta entries (matches pew's isAllZero)
+                if input_tokens == 0 and output_tokens == 0 and cache_creation == 0 and cache_read == 0:
+                    continue
+
+                entries.append({
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "cache_creation_tokens": cache_creation,
+                    "cache_read_tokens": cache_read,
+                    "model": model,
+                })
             new_offset = f.tell()
     except (OSError, PermissionError) as e:
         logger.debug(f"Cannot read {file_path}: {e}")
@@ -82,13 +114,8 @@ def collect_claude_tokens(projects_dir: Path) -> list[dict]:
 
         project_name = project_dir.name
 
-        # Only scan root-level JSONL files (main sessions),
-        # skip subagents/ directory to avoid double-counting
-        jsonl_files = list(project_dir.glob("*.jsonl"))
-        # Also scan session subdirectories (UUID dirs) but not their subagents/
-        for subdir in project_dir.iterdir():
-            if subdir.is_dir() and subdir.name != "subagents":
-                jsonl_files.extend(subdir.glob("*.jsonl"))
+        # Recursively scan ALL .jsonl files (matches pew's collectFiles)
+        jsonl_files = list(project_dir.rglob("*.jsonl"))
 
         for jsonl_file in jsonl_files:
             file_key = str(jsonl_file)
