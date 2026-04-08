@@ -7,6 +7,7 @@ import { ProcessList } from "@/components/ProcessList";
 import { HistoryChart } from "@/components/HistoryChart";
 import { TokenUsageChart } from "@/components/TokenUsageChart";
 import { TokenUsageByProject } from "@/components/TokenUsageByProject";
+import { formatDateTime } from "@/utils/time";
 
 export function MachineDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,10 +53,10 @@ export function MachineDetailPage() {
 
       <div className="text-sm text-slate-500">
         Last heartbeat:{" "}
-        {new Date(machine.last_heartbeat).toLocaleString()}
+        {formatDateTime(machine.last_heartbeat)}
         {" | "}
         First seen:{" "}
-        {new Date(machine.first_seen).toLocaleString()}
+        {formatDateTime(machine.first_seen)}
       </div>
 
       {m ? (

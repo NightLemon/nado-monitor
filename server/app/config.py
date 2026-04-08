@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     session_token_secret: str = ""
     session_token_expiry_hours: int = 24
 
+    # Display timezone offset from UTC (hours), e.g. 8 for Asia/Shanghai
+    display_timezone_offset: int = 8
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

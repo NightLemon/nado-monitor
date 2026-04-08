@@ -9,6 +9,7 @@ import {
   Legend,
 } from "recharts";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
+import { formatHourLabel } from "@/utils/time";
 
 interface TokenUsageChartProps {
   machineId: number;
@@ -27,18 +28,6 @@ function formatNumber(n: number): string {
   return String(n);
 }
 
-function formatHour(hour: string, hours: number): string {
-  const d = new Date(hour);
-  if (hours <= 24) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  return d.toLocaleDateString([], {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-  });
-}
-
 export function TokenUsageChart({ machineId }: TokenUsageChartProps) {
   const [hours, setHours] = useState(24);
   const { data, isLoading, error } = useTokenUsage(machineId, hours);
@@ -47,7 +36,7 @@ export function TokenUsageChart({ machineId }: TokenUsageChartProps) {
     if (!data) return [];
     return data.by_time.map((p) => ({
       ...p,
-      time: formatHour(p.hour, hours),
+      time: formatHourLabel(p.hour, hours),
     }));
   }, [data, hours]);
 

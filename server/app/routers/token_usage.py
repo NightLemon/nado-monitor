@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ..config import get_settings
 from ..database import get_db
 from ..dependencies import verify_session_token
 from ..models import Machine, TokenUsage
@@ -55,10 +56,14 @@ def get_token_usage(
         for r in project_rows
     ]
 
-    # By time (hourly buckets) — use strftime for SQLite
+    # By time (hourly buckets) — apply timezone offset for display
+    offset = get_settings().display_timezone_offset
+    offset_modifier = f"+{offset} hours" if offset >= 0 else f"{offset} hours"
     time_rows = (
         db.query(
-            func.strftime("%Y-%m-%dT%H:00:00", TokenUsage.timestamp).label("hour"),
+            func.strftime(
+                "%Y-%m-%dT%H:00:00", TokenUsage.timestamp, offset_modifier
+            ).label("hour"),
             func.sum(TokenUsage.input_tokens).label("total_input"),
             func.sum(TokenUsage.output_tokens).label("total_output"),
             func.sum(TokenUsage.cache_creation_tokens).label("total_cache_creation"),

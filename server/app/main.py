@@ -53,6 +53,11 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/api/config/public")
+def public_config():
+    return {"timezone_offset": get_settings().display_timezone_offset}
+
+
 # Serve built frontend in production
 # In dev: server/app/main.py → ../../.. = project root
 # In deploy: app/main.py → ../.. = wwwroot (deploy root)

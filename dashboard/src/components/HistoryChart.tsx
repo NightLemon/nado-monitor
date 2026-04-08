@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import type { HistoryPoint } from "@/types";
 import { useMachineHistory } from "@/hooks/useMachineHistory";
+import { formatTime as formatTzTime } from "@/utils/time";
 
 interface HistoryChartProps {
   machineId: number;
@@ -22,14 +23,6 @@ const TIME_RANGES = [
   { label: "7d", hours: 168 },
 ];
 
-function formatTime(timestamp: string, hours: number): string {
-  const d = new Date(timestamp);
-  if (hours <= 24) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  return d.toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
 export function HistoryChart({ machineId }: HistoryChartProps) {
   const [hours, setHours] = useState(24);
   const { data, isLoading, error } = useMachineHistory(machineId, hours);
@@ -38,7 +31,7 @@ export function HistoryChart({ machineId }: HistoryChartProps) {
     if (!data) return [];
     return data.data_points.map((p: HistoryPoint) => ({
       ...p,
-      time: formatTime(p.timestamp, hours),
+      time: formatTzTime(p.timestamp, hours > 24),
     }));
   }, [data, hours]);
 
