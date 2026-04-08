@@ -49,6 +49,9 @@ def _scan_jsonl(file_path: Path, offset: int) -> tuple[list[dict], int]:
 
                 msg = data.get("message", {})
                 usage = msg.get("usage")
+                # Skip sidechain (subagent) entries to avoid double-counting
+                if data.get("isSidechain"):
+                    continue
                 if msg.get("role") == "assistant" and usage:
                     entries.append({
                         "input_tokens": usage.get("input_tokens") or 0,
@@ -79,8 +82,13 @@ def collect_claude_tokens(projects_dir: Path) -> list[dict]:
 
         project_name = project_dir.name
 
-        # Find all JSONL files (conversations + subagents)
-        jsonl_files = list(project_dir.glob("**/*.jsonl"))
+        # Only scan root-level JSONL files (main sessions),
+        # skip subagents/ directory to avoid double-counting
+        jsonl_files = list(project_dir.glob("*.jsonl"))
+        # Also scan session subdirectories (UUID dirs) but not their subagents/
+        for subdir in project_dir.iterdir():
+            if subdir.is_dir() and subdir.name != "subagents":
+                jsonl_files.extend(subdir.glob("*.jsonl"))
 
         for jsonl_file in jsonl_files:
             file_key = str(jsonl_file)
