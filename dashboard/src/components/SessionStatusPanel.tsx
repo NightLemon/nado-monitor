@@ -73,16 +73,21 @@ export function SessionStatusPanel({ sessions }: SessionStatusPanelProps) {
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs border ${cfg.badgeClass}`}
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs border shrink-0 ${cfg.badgeClass}`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${cfg.dotClass}`}
                   />
                   {cfg.label}
                 </span>
-                <span className="text-sm text-white truncate">
-                  {s.slug || shortProject(s.project_path)}
+                <span className="text-sm text-white font-medium truncate">
+                  {shortProject(s.project_path)}
                 </span>
+                {s.slug && (
+                  <span className="text-xs text-slate-500 truncate">
+                    {s.slug}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3 text-xs text-slate-500 shrink-0">
                 {s.model && (
