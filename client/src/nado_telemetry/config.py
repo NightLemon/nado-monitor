@@ -16,6 +16,14 @@ except ModuleNotFoundError:
 DEFAULT_MONITORED = ["claude", "node", "python", "code", "cursor", "docker"]
 
 
+def _is_wsl() -> bool:
+    """Detect if running inside WSL (shares hostname with Windows host)."""
+    try:
+        return "microsoft" in Path("/proc/version").read_text().lower()
+    except OSError:
+        return False
+
+
 @dataclass
 class ClientConfig:
     server_url: str = "http://localhost:8000"
@@ -30,6 +38,8 @@ class ClientConfig:
     def __post_init__(self):
         if not self.machine_name:
             self.machine_name = platform.node()
+            if _is_wsl():
+                self.machine_name += "-WSL"
         if not self.os_type:
             self.os_type = "windows" if sys.platform == "win32" else "linux"
         if not self.claude_projects_dir:
