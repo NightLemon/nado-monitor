@@ -4,6 +4,7 @@ import { useMachineDetail } from "@/hooks/useMachineHistory";
 import { StatusBadge } from "@/components/StatusBadge";
 import { MetricGauge } from "@/components/MetricGauge";
 import { ProcessList } from "@/components/ProcessList";
+import { SessionStatusPanel } from "@/components/SessionStatusPanel";
 import { HistoryChart } from "@/components/HistoryChart";
 import { TokenUsageChart } from "@/components/TokenUsageChart";
 import { TokenUsageByProject } from "@/components/TokenUsageByProject";
@@ -61,6 +62,11 @@ export function MachineDetailPage() {
 
       {m ? (
         <>
+          {/* Session Status */}
+          {machine.session_status && machine.session_status.length > 0 && (
+            <SessionStatusPanel sessions={machine.session_status} />
+          )}
+
           {/* Metric Gauges */}
           <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
             <div className="flex justify-around">

@@ -18,6 +18,7 @@ class Machine(Base):
     first_seen: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
+    session_status: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
 
     telemetry: Mapped[list["Telemetry"]] = relationship(
         back_populates="machine", cascade="all, delete-orphan"

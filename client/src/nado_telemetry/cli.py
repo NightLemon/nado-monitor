@@ -7,6 +7,7 @@ import httpx
 
 from .collectors.claude_tokens import collect_claude_tokens
 from .collectors.processes import detect_processes
+from .collectors.session_status import collect_session_status
 from .collectors.system import collect_system_metrics
 from .config import load_config
 
@@ -34,7 +35,10 @@ def run(config_path: str | None = None):
 
             token_usage = []
             if config.track_claude_tokens:
-                token_usage = collect_claude_tokens(Path(config.claude_projects_dir))
+                projects_dir = Path(config.claude_projects_dir)
+                token_usage = collect_claude_tokens(projects_dir)
+
+            session_status = collect_session_status(Path(config.claude_projects_dir))
 
             payload = {
                 "machine_name": config.machine_name,
@@ -42,6 +46,7 @@ def run(config_path: str | None = None):
                 **metrics,
                 "processes": processes,
                 "token_usage": token_usage,
+                "session_status": session_status,
             }
 
             response = httpx.post(
@@ -56,7 +61,8 @@ def run(config_path: str | None = None):
                 f"Sent: cpu={metrics['cpu_percent']}%, "
                 f"mem={metrics['memory_percent']}%, "
                 f"procs={len(processes)}, "
-                f"token_entries={len(token_usage)}"
+                f"token_entries={len(token_usage)}, "
+                f"sessions={len(session_status)}"
             )
 
         except httpx.HTTPError as e:

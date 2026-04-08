@@ -17,6 +17,15 @@ export interface LatestMetrics {
   timestamp: string;
 }
 
+export interface SessionStatus {
+  project_path: string;
+  session_id: string;
+  status: "running" | "waiting_tool" | "waiting_input" | "idle";
+  model: string;
+  last_activity: string;
+  slug: string;
+}
+
 export interface Machine {
   id: number;
   machine_name: string;
@@ -25,6 +34,7 @@ export interface Machine {
   last_heartbeat: string;
   first_seen: string;
   latest_metrics: LatestMetrics | null;
+  session_status: SessionStatus[];
 }
 
 export interface HistoryPoint {

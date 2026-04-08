@@ -21,6 +21,15 @@ class TokenUsageEntry(BaseModel):
     cache_read_tokens: int = 0
 
 
+class SessionStatusEntry(BaseModel):
+    project_path: str
+    session_id: str
+    status: str  # running | waiting_tool | waiting_input | idle
+    model: str = ""
+    last_activity: str = ""
+    slug: str = ""
+
+
 class TelemetryPayload(BaseModel):
     machine_name: str
     os_type: str
@@ -33,6 +42,7 @@ class TelemetryPayload(BaseModel):
     disk_total_gb: float
     processes: list[ProcessInfo] = []
     token_usage: list[TokenUsageEntry] = []
+    session_status: list[SessionStatusEntry] = []
 
 
 class LatestMetrics(BaseModel):
@@ -55,6 +65,7 @@ class MachineOut(BaseModel):
     last_heartbeat: datetime
     first_seen: datetime
     latest_metrics: LatestMetrics | None = None
+    session_status: list[SessionStatusEntry] = []
 
     model_config = {"from_attributes": True}
 

@@ -73,6 +73,36 @@ export function MachineCard({ machine }: MachineCardProps) {
               ))}
             </div>
           )}
+
+          {machine.session_status && machine.session_status.length > 0 && (() => {
+            const waiting = machine.session_status.filter(
+              (s) => s.status === "waiting_tool" || s.status === "waiting_input",
+            );
+            const active = machine.session_status.filter(
+              (s) => s.status === "running",
+            );
+            return (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {waiting.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 text-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    {waiting.length} waiting
+                  </span>
+                )}
+                {active.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    {active.length} running
+                  </span>
+                )}
+                {machine.session_status.filter((s) => s.status === "idle").length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-500/10 text-slate-400 text-xs">
+                    {machine.session_status.filter((s) => s.status === "idle").length} idle
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
       ) : (
         <p className="text-sm text-slate-500">No metrics available</p>

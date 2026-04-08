@@ -42,6 +42,9 @@ def ingest_telemetry(payload: TelemetryPayload, db: Session = Depends(get_db)):
         machine.last_heartbeat = now
         machine.os_type = payload.os_type
 
+    # Store session status snapshot as JSON on the machine record
+    machine.session_status = json.dumps([s.model_dump() for s in payload.session_status])
+
     telemetry = Telemetry(
         machine_id=machine.id,
         timestamp=now,

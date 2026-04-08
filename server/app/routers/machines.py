@@ -9,7 +9,7 @@ from ..config import get_settings
 from ..database import get_db
 from ..dependencies import verify_session_token
 from ..models import Machine, Telemetry
-from ..schemas import HistoryPoint, HistoryResponse, LatestMetrics, MachineOut
+from ..schemas import HistoryPoint, HistoryResponse, LatestMetrics, MachineOut, SessionStatusEntry
 
 router = APIRouter(tags=["machines"], dependencies=[Depends(verify_session_token)])
 
@@ -39,6 +39,10 @@ def _build_latest_metrics(t: Telemetry | None) -> LatestMetrics | None:
 
 
 def _machine_to_out(machine: Machine, latest: Telemetry | None) -> MachineOut:
+    try:
+        sessions = [SessionStatusEntry(**s) for s in json.loads(machine.session_status or "[]")]
+    except Exception:
+        sessions = []
     return MachineOut(
         id=machine.id,
         machine_name=machine.machine_name,
@@ -47,6 +51,7 @@ def _machine_to_out(machine: Machine, latest: Telemetry | None) -> MachineOut:
         last_heartbeat=machine.last_heartbeat,
         first_seen=machine.first_seen,
         latest_metrics=_build_latest_metrics(latest),
+        session_status=sessions,
     )
 
 
