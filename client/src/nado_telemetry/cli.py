@@ -1,9 +1,11 @@
 import argparse
 import logging
 import time
+from pathlib import Path
 
 import httpx
 
+from .collectors.claude_tokens import collect_claude_tokens
 from .collectors.processes import detect_processes
 from .collectors.system import collect_system_metrics
 from .config import load_config
@@ -30,11 +32,16 @@ def run(config_path: str | None = None):
             metrics = collect_system_metrics()
             processes = detect_processes(config.monitored_processes)
 
+            token_usage = []
+            if config.track_claude_tokens:
+                token_usage = collect_claude_tokens(Path(config.claude_projects_dir))
+
             payload = {
                 "machine_name": config.machine_name,
                 "os_type": config.os_type,
                 **metrics,
                 "processes": processes,
+                "token_usage": token_usage,
             }
 
             response = httpx.post(
@@ -48,7 +55,8 @@ def run(config_path: str | None = None):
             logger.info(
                 f"Sent: cpu={metrics['cpu_percent']}%, "
                 f"mem={metrics['memory_percent']}%, "
-                f"procs={len(processes)}"
+                f"procs={len(processes)}, "
+                f"token_entries={len(token_usage)}"
             )
 
         except httpx.HTTPError as e:

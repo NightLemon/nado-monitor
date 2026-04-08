@@ -11,6 +11,16 @@ class ProcessInfo(BaseModel):
     status: str
 
 
+class TokenUsageEntry(BaseModel):
+    project_path: str
+    session_id: str
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_creation_tokens: int = 0
+    cache_read_tokens: int = 0
+
+
 class TelemetryPayload(BaseModel):
     machine_name: str
     os_type: str
@@ -22,6 +32,7 @@ class TelemetryPayload(BaseModel):
     disk_used_gb: float
     disk_total_gb: float
     processes: list[ProcessInfo] = []
+    token_usage: list[TokenUsageEntry] = []
 
 
 class LatestMetrics(BaseModel):
@@ -58,3 +69,35 @@ class HistoryPoint(BaseModel):
 class HistoryResponse(BaseModel):
     machine_name: str
     data_points: list[HistoryPoint]
+
+
+class LoginRequest(BaseModel):
+    code: str
+
+
+class LoginResponse(BaseModel):
+    token: str
+    expires_in: int
+
+
+class TokenUsageSummary(BaseModel):
+    project_path: str
+    model: str
+    total_input_tokens: int
+    total_output_tokens: int
+    total_cache_creation_tokens: int
+    total_cache_read_tokens: int
+
+
+class TokenUsageTimePoint(BaseModel):
+    hour: str
+    input_tokens: int
+    output_tokens: int
+    cache_creation_tokens: int
+    cache_read_tokens: int
+
+
+class TokenUsageResponse(BaseModel):
+    machine_name: str
+    by_project: list[TokenUsageSummary]
+    by_time: list[TokenUsageTimePoint]

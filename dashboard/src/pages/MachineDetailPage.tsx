@@ -5,6 +5,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { MetricGauge } from "@/components/MetricGauge";
 import { ProcessList } from "@/components/ProcessList";
 import { HistoryChart } from "@/components/HistoryChart";
+import { TokenUsageChart } from "@/components/TokenUsageChart";
+import { TokenUsageByProject } from "@/components/TokenUsageByProject";
 
 export function MachineDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,6 +87,10 @@ export function MachineDetailPage() {
 
           {/* History Chart */}
           <HistoryChart machineId={machineId} />
+
+          {/* Token Usage */}
+          <TokenUsageChart machineId={machineId} />
+          <TokenUsageByProject machineId={machineId} hours={24} />
         </>
       ) : (
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 text-center text-slate-500">

@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
 from .database import Base, engine
-from .routers import machines, telemetry
+from .routers import machines, telemetry, auth, token_usage
 from .tasks import cleanup_loop
 
 logging.basicConfig(level=logging.INFO)
@@ -33,16 +33,19 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Nado Monitor", version="1.0.0", lifespan=lifespan)
 
 settings = get_settings()
+origins = settings.cors_origins.split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins.split(","),
-    allow_credentials=True,
+    allow_origins=origins,
+    allow_credentials=("*" not in origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api")
 app.include_router(telemetry.router, prefix="/api")
 app.include_router(machines.router, prefix="/api")
+app.include_router(token_usage.router, prefix="/api")
 
 
 @app.get("/api/health")
@@ -66,7 +69,12 @@ if frontend_dist.exists():
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        file_path = frontend_dist / full_path
-        if file_path.exists() and file_path.is_file():
+        file_path = (frontend_dist / full_path).resolve()
+        dist_resolved = frontend_dist.resolve()
+        if (
+            str(file_path).startswith(str(dist_resolved))
+            and file_path.exists()
+            and file_path.is_file()
+        ):
             return FileResponse(str(file_path))
         return FileResponse(str(frontend_dist / "index.html"))

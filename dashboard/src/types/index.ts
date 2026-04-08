@@ -38,3 +38,26 @@ export interface HistoryResponse {
   machine_name: string;
   data_points: HistoryPoint[];
 }
+
+export interface TokenUsageSummary {
+  project_path: string;
+  model: string;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_cache_creation_tokens: number;
+  total_cache_read_tokens: number;
+}
+
+export interface TokenUsageTimePoint {
+  hour: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+}
+
+export interface TokenUsageResponse {
+  machine_name: string;
+  by_project: TokenUsageSummary[];
+  by_time: TokenUsageTimePoint[];
+}

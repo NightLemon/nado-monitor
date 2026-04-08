@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete
 
 from .database import SessionLocal
-from .models import Telemetry
+from .models import Telemetry, TokenUsage
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,13 @@ async def cleanup_loop(interval_hours: int, retention_days: int):
                 result = db.execute(
                     delete(Telemetry).where(Telemetry.timestamp < cutoff)
                 )
+                result2 = db.execute(
+                    delete(TokenUsage).where(TokenUsage.timestamp < cutoff)
+                )
                 db.commit()
-                logger.info(f"Cleaned up {result.rowcount} old telemetry records")
+                logger.info(
+                    f"Cleaned up {result.rowcount} telemetry + "
+                    f"{result2.rowcount} token_usage records"
+                )
         except Exception:
             logger.exception("Error during telemetry cleanup")

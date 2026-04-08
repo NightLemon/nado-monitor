@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..dependencies import verify_api_key
-from ..models import Machine, Telemetry
+from ..models import Machine, Telemetry, TokenUsage
 from ..schemas import TelemetryPayload
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,20 @@ def ingest_telemetry(payload: TelemetryPayload, db: Session = Depends(get_db)):
         processes=json.dumps([p.model_dump() for p in payload.processes]),
     )
     db.add(telemetry)
+
+    for tu in payload.token_usage:
+        db.add(TokenUsage(
+            machine_id=machine.id,
+            timestamp=now,
+            project_path=tu.project_path,
+            session_id=tu.session_id,
+            model=tu.model,
+            input_tokens=tu.input_tokens,
+            output_tokens=tu.output_tokens,
+            cache_creation_tokens=tu.cache_creation_tokens,
+            cache_read_tokens=tu.cache_read_tokens,
+        ))
+
     db.commit()
 
     return {"status": "ok"}

@@ -7,10 +7,11 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..database import get_db
+from ..dependencies import verify_session_token
 from ..models import Machine, Telemetry
 from ..schemas import HistoryPoint, HistoryResponse, LatestMetrics, MachineOut
 
-router = APIRouter(tags=["machines"])
+router = APIRouter(tags=["machines"], dependencies=[Depends(verify_session_token)])
 
 
 def _is_online(last_heartbeat: datetime) -> bool:

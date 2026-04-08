@@ -24,12 +24,16 @@ class ClientConfig:
     os_type: str = ""
     interval_seconds: int = 30
     monitored_processes: list[str] = field(default_factory=lambda: list(DEFAULT_MONITORED))
+    track_claude_tokens: bool = True
+    claude_projects_dir: str = ""
 
     def __post_init__(self):
         if not self.machine_name:
             self.machine_name = platform.node()
         if not self.os_type:
             self.os_type = "windows" if sys.platform == "win32" else "linux"
+        if not self.claude_projects_dir:
+            self.claude_projects_dir = str(Path.home() / ".claude" / "projects")
 
     def validate(self):
         if not self.server_url.startswith("http"):
@@ -65,6 +69,8 @@ def load_config(config_path: str | None = None) -> ClientConfig:
             os_type=data.get("os_type", ""),
             interval_seconds=data.get("interval_seconds", 30),
             monitored_processes=data.get("monitored_processes", list(DEFAULT_MONITORED)),
+            track_claude_tokens=data.get("track_claude_tokens", True),
+            claude_projects_dir=data.get("claude_projects_dir", ""),
         )
         config.validate()
         return config
@@ -78,6 +84,8 @@ def load_config(config_path: str | None = None) -> ClientConfig:
         os_type=os.environ.get("NADO_OS_TYPE", ""),
         interval_seconds=int(os.environ.get("NADO_INTERVAL", "30")),
         monitored_processes=monitored.split(",") if monitored else list(DEFAULT_MONITORED),
+        track_claude_tokens=os.environ.get("NADO_TRACK_CLAUDE_TOKENS", "true").lower() != "false",
+        claude_projects_dir=os.environ.get("NADO_CLAUDE_PROJECTS_DIR", ""),
     )
     config.validate()
     return config
