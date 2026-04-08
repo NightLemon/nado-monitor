@@ -51,11 +51,11 @@ def _scan_jsonl(file_path: Path, offset: int) -> tuple[list[dict], int]:
                 usage = msg.get("usage")
                 if msg.get("role") == "assistant" and usage:
                     entries.append({
-                        "input_tokens": usage.get("input_tokens", 0),
-                        "output_tokens": usage.get("output_tokens", 0),
-                        "cache_creation_tokens": usage.get("cache_creation_input_tokens", 0),
-                        "cache_read_tokens": usage.get("cache_read_input_tokens", 0),
-                        "model": msg.get("model", "unknown"),
+                        "input_tokens": usage.get("input_tokens") or 0,
+                        "output_tokens": usage.get("output_tokens") or 0,
+                        "cache_creation_tokens": usage.get("cache_creation_input_tokens") or 0,
+                        "cache_read_tokens": usage.get("cache_read_input_tokens") or 0,
+                        "model": msg.get("model") or "unknown",
                     })
             new_offset = f.tell()
     except (OSError, PermissionError) as e:
@@ -107,10 +107,10 @@ def collect_claude_tokens(projects_dir: Path) -> list[dict]:
                         "cache_read_tokens": 0,
                     }
                 agg = results[key]
-                agg["input_tokens"] += entry["input_tokens"]
-                agg["output_tokens"] += entry["output_tokens"]
-                agg["cache_creation_tokens"] += entry["cache_creation_tokens"]
-                agg["cache_read_tokens"] += entry["cache_read_tokens"]
+                agg["input_tokens"] += entry["input_tokens"] or 0
+                agg["output_tokens"] += entry["output_tokens"] or 0
+                agg["cache_creation_tokens"] += entry["cache_creation_tokens"] or 0
+                agg["cache_read_tokens"] += entry["cache_read_tokens"] or 0
 
     _save_offsets(offsets)
 
