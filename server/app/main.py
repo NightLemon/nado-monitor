@@ -17,9 +17,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _migrate_db():
+    """Add missing columns to existing tables (simple migration)."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    if "machines" in inspector.get_table_names():
+        columns = {c["name"] for c in inspector.get_columns("machines")}
+        if "session_status" not in columns:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE machines ADD COLUMN session_status TEXT NOT NULL DEFAULT '[]'"
+                ))
+            logger.info("Migrated: added session_status column to machines table")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _migrate_db()
     logger.info("Database tables created")
 
     settings = get_settings()
