@@ -1,5 +1,5 @@
 import type { SessionStatus } from "@/types";
-import { formatTime } from "@/utils/time";
+import { toDisplayTime } from "@/utils/time";
 
 interface SessionStatusPanelProps {
   sessions: SessionStatus[];
@@ -33,13 +33,25 @@ const STATUS_CONFIG: Record<
 
 function shortProject(path: string): string {
   // "c--Users-lxiang-repos-nado-monitor" -> "nado-monitor"
-  const parts = path.split("-");
-  return parts[parts.length - 1] || path;
+  // Find the part after "repos-" if present, otherwise last meaningful segment
+  const reposIdx = path.indexOf("-repos-");
+  if (reposIdx >= 0) {
+    return path.slice(reposIdx + 7); // skip "-repos-"
+  }
+  return path;
 }
 
 function shortModel(model: string): string {
   // "claude-opus-4-6" -> "opus-4-6"
   return model.replace(/^claude-/, "");
+}
+
+function formatActivityTime(isoStr: string): string {
+  // isoStr can be "2026-04-08T15:41:01.859000+00:00" or with "Z"
+  const d = toDisplayTime(isoStr.replace(/\+00:00$/, "Z"));
+  const h = d.getUTCHours().toString().padStart(2, "0");
+  const m = d.getUTCMinutes().toString().padStart(2, "0");
+  return `${h}:${m}`;
 }
 
 export function SessionStatusPanel({ sessions }: SessionStatusPanelProps) {
@@ -77,7 +89,7 @@ export function SessionStatusPanel({ sessions }: SessionStatusPanelProps) {
                   <span className="text-slate-400">{shortModel(s.model)}</span>
                 )}
                 {s.last_activity && (
-                  <span>{formatTime(s.last_activity)}</span>
+                  <span>{formatActivityTime(s.last_activity)}</span>
                 )}
               </div>
             </div>
