@@ -6,10 +6,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Thresholds in seconds
-ACTIVE_THRESHOLD = 120  # 2 minutes — file modified within this = active session
 STALE_THRESHOLD = 3600  # 1 hour — older than this = skip entirely
-TAIL_BYTES = 8192  # read last 8KB of file to find recent entries
+TAIL_BYTES = 16384  # read last 16KB to get enough context
+
+# Entry types that represent real conversation turns
+TURN_TYPES = {"user", "assistant"}
 
 
 def _read_tail_lines(file_path: Path, num_bytes: int = TAIL_BYTES) -> list[str]:
@@ -41,11 +42,12 @@ def _parse_session(file_path: Path, project_name: str, now: float) -> dict | Non
     if not lines:
         return None
 
-    # Parse last entries to determine state
-    last_assistant = None
-    last_type = None
+    # Walk backwards through entries to find the last conversation turn
     slug = ""
     model = ""
+    last_turn_type = None  # "user" or "assistant"
+    last_assistant_stop = None  # stop_reason of the last assistant before any user
+    found_user_after_assistant = False
 
     for raw in reversed(lines):
         if not raw.startswith("{"):
@@ -57,41 +59,56 @@ def _parse_session(file_path: Path, project_name: str, now: float) -> dict | Non
 
         entry_type = entry.get("type")
 
-        # Extract slug from any recent entry that has it
+        # Extract slug from any entry that has it
         if not slug:
             slug = entry.get("slug", "")
 
-        if entry_type == "assistant" and last_assistant is None:
-            last_assistant = entry
+        if entry_type not in TURN_TYPES:
+            continue
+
+        if entry_type == "user" and last_turn_type is None:
+            last_turn_type = "user"
+            # If we already found an assistant, this user came after it
+            if last_assistant_stop is not None:
+                found_user_after_assistant = True
+
+        if entry_type == "assistant":
             msg = entry.get("message") or {}
-            model = msg.get("model") or entry.get("model") or ""
-            if not last_type:
-                last_type = "assistant"
+            if not model:
+                model = msg.get("model") or entry.get("model") or ""
+            stop = entry.get("stop_reason") or msg.get("stop_reason")
+            if last_assistant_stop is None:
+                last_assistant_stop = stop
+            if last_turn_type is None:
+                last_turn_type = "assistant"
 
-        elif entry_type == "user" and last_type is None:
-            last_type = "user"
-
-        # Once we have both pieces, stop scanning
-        if last_type and last_assistant and slug:
+        # Once we have slug + model + turn info, we're done
+        if slug and model and last_turn_type:
             break
 
-    # Determine status
-    if age < ACTIVE_THRESHOLD:
-        if last_type == "assistant" and last_assistant:
-            stop_reason = last_assistant.get("stop_reason") or (
-                last_assistant.get("message", {}).get("stop_reason")
-            )
-            if stop_reason == "tool_use":
-                status = "waiting_tool"
-            elif stop_reason == "end_turn":
-                status = "waiting_input"
-            else:
+    if not last_turn_type:
+        return None
+
+    # Determine status based on content, not mtime
+    if last_turn_type == "user":
+        # Last turn was user — AI is processing or user sent tool_result
+        status = "running"
+    elif last_turn_type == "assistant":
+        if last_assistant_stop == "tool_use":
+            if found_user_after_assistant:
+                # tool_use followed by user (tool_result) = still processing
                 status = "running"
-        elif last_type == "user":
-            status = "running"
+            else:
+                status = "waiting_tool"
+        elif last_assistant_stop == "end_turn":
+            status = "waiting_input"
         else:
             status = "running"
     else:
+        status = "idle"
+
+    # Only mark as idle if file is truly stale (>10 min) AND status would be waiting
+    if age > 600 and status in ("waiting_input", "waiting_tool"):
         status = "idle"
 
     last_activity = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
