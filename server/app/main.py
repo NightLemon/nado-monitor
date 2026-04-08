@@ -51,7 +51,12 @@ def health():
 
 
 # Serve built frontend in production
-frontend_dist = Path(__file__).parent.parent.parent / "dashboard" / "dist"
+# In dev: server/app/main.py → ../../.. = project root
+# In deploy: app/main.py → ../.. = wwwroot (deploy root)
+_app_dir = Path(__file__).parent.parent
+frontend_dist = _app_dir.parent / "dashboard" / "dist"
+if not frontend_dist.exists():
+    frontend_dist = _app_dir / "dashboard" / "dist"
 if frontend_dist.exists():
     app.mount(
         "/assets",
