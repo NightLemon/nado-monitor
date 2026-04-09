@@ -27,7 +27,7 @@ def get_token_usage(
     if machine is None:
         raise HTTPException(status_code=404, detail="Machine not found")
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
 
     # By project aggregation
     project_rows = (

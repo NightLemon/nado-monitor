@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -14,6 +14,8 @@ import { estimateCost, formatCost } from "@/utils/pricing";
 
 interface TokenUsageChartProps {
   machineId: number;
+  hours: number;
+  onHoursChange: (hours: number) => void;
 }
 
 const TIME_RANGES = [
@@ -29,8 +31,7 @@ function formatNumber(n: number): string {
   return String(n);
 }
 
-export function TokenUsageChart({ machineId }: TokenUsageChartProps) {
-  const [hours, setHours] = useState(24);
+export function TokenUsageChart({ machineId, hours, onHoursChange }: TokenUsageChartProps) {
   const { data, isLoading, error } = useTokenUsage(machineId, hours);
 
   const chartData = useMemo(() => {
@@ -83,7 +84,7 @@ export function TokenUsageChart({ machineId }: TokenUsageChartProps) {
           {TIME_RANGES.map((r) => (
             <button
               key={r.hours}
-              onClick={() => setHours(r.hours)}
+              onClick={() => onHoursChange(r.hours)}
               className={`px-3 py-1 text-xs rounded-md transition-colors cursor-pointer ${
                 hours === r.hours
                   ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"

@@ -31,6 +31,10 @@ def _is_online(last_heartbeat: datetime) -> bool:
 def _build_latest_metrics(t: Telemetry | None) -> LatestMetrics | None:
     if t is None:
         return None
+    try:
+        processes = json.loads(t.processes)
+    except Exception:
+        processes = []
     return LatestMetrics(
         cpu_percent=t.cpu_percent,
         memory_percent=t.memory_percent,
@@ -39,7 +43,7 @@ def _build_latest_metrics(t: Telemetry | None) -> LatestMetrics | None:
         disk_percent=t.disk_percent,
         disk_used_gb=t.disk_used_gb,
         disk_total_gb=t.disk_total_gb,
-        processes=json.loads(t.processes),
+        processes=processes,
         timestamp=t.timestamp,
     )
 
@@ -129,7 +133,7 @@ def get_machine(machine_id: int, db: Session = Depends(get_db)):
         .first()
     )
 
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
     token_row = (
         db.query(
             func.sum(TokenUsage.input_tokens).label("input"),
@@ -162,7 +166,7 @@ def get_machine_history(
     if machine is None:
         raise HTTPException(status_code=404, detail="Machine not found")
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
 
     rows = (
         db.query(Telemetry)

@@ -25,12 +25,13 @@ def login(body: LoginRequest, response: Response):
         key="session",
         value=token,
         httponly=True,
+        secure=settings.environment != "development",
         samesite="lax",
         max_age=expires_in,
         path="/",
     )
 
-    return LoginResponse(token=token, expires_in=expires_in)
+    return LoginResponse(expires_in=expires_in)
 
 
 @router.post("/auth/logout")

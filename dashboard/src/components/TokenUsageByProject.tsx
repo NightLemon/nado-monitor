@@ -164,7 +164,7 @@ export function TokenUsageByProject({
                     </td>
                   </tr>
                   {isOpen &&
-                    group.models
+                    [...group.models]
                       .sort(
                         (a, b) =>
                           b.total_input_tokens +

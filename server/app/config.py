@@ -37,4 +37,10 @@ def get_settings() -> Settings:
         if not _settings.session_token_secret:
             import os
             _settings.session_token_secret = os.urandom(32).hex()
+        # Warn if using default API key in production
+        if _settings.environment != "development" and _settings.api_key == "change-me-in-production":
+            import logging
+            logging.getLogger(__name__).warning(
+                "API_KEY is set to the default value — set API_KEY env var in production"
+            )
     return _settings

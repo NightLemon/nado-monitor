@@ -6,11 +6,14 @@ const api = axios.create({
   withCredentials: true, // Send cookies with requests
 });
 
-// Redirect to login on 401
+// Redirect to login on 401 (skip auth endpoints to avoid preempting their error handling)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes("/auth/")
+    ) {
       window.location.href = "/login";
     }
     return Promise.reject(error);
@@ -19,8 +22,8 @@ api.interceptors.response.use(
 
 export async function login(
   code: string,
-): Promise<{ token: string; expires_in: number }> {
-  const { data } = await api.post<{ token: string; expires_in: number }>(
+): Promise<{ expires_in: number }> {
+  const { data } = await api.post<{ expires_in: number }>(
     "/auth/login",
     { code },
   );

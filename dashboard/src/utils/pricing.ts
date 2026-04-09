@@ -37,5 +37,5 @@ export function estimateCost(
 export function formatCost(cost: number): string {
   if (cost < 0.01) return "<$0.01";
   if (cost < 1) return `$${cost.toFixed(2)}`;
-  return `$${cost.toFixed(2)}`;
+  return `$${cost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

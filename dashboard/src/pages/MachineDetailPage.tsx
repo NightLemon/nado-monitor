@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Monitor, Terminal, Loader2, AlertCircle } from "lucide-react";
 import { useMachineDetail } from "@/hooks/useMachineHistory";
@@ -13,7 +14,17 @@ import { formatDateTime } from "@/utils/time";
 export function MachineDetailPage() {
   const { id } = useParams<{ id: string }>();
   const machineId = Number(id);
+  const [tokenHours, setTokenHours] = useState(24);
   const { data: machine, isLoading, error } = useMachineDetail(machineId);
+
+  if (isNaN(machineId) || machineId <= 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-red-400 gap-2">
+        <AlertCircle className="w-5 h-5" />
+        <span>Invalid machine ID</span>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -96,8 +107,8 @@ export function MachineDetailPage() {
           <HistoryChart machineId={machineId} />
 
           {/* Token Usage */}
-          <TokenUsageChart machineId={machineId} />
-          <TokenUsageByProject machineId={machineId} hours={24} />
+          <TokenUsageChart machineId={machineId} hours={tokenHours} onHoursChange={setTokenHours} />
+          <TokenUsageByProject machineId={machineId} hours={tokenHours} />
         </>
       ) : (
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 text-center text-slate-500">

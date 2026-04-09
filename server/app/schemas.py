@@ -95,7 +95,6 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    token: str
     expires_in: int
 
 

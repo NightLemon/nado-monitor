@@ -69,12 +69,12 @@ export function MachineCard({ machine }: MachineCardProps) {
             </span>
           </div>
 
-          {/* Today cost */}
+          {/* Today cost (estimate based on sonnet pricing) */}
           {todayCost > 0 && (
             <div className="text-sm">
               <span className="text-slate-500">Today </span>
               <span className="text-amber-400 font-medium">
-                {formatCost(todayCost)}
+                ~{formatCost(todayCost)}
               </span>
             </div>
           )}

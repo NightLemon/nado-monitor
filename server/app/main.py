@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -51,9 +52,18 @@ async def lifespan(app: FastAPI):
     yield
     task.cancel()
     alert_task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await alert_task
+    except asyncio.CancelledError:
+        pass
 
 
-app = FastAPI(title="Nado Monitor", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Nado Monitor", version="1.0.0", lifespan=lifespan,
+              docs_url=None, redoc_url=None, openapi_url=None)
 
 settings = get_settings()
 origins = settings.cors_origins.split(",")
@@ -102,7 +112,7 @@ if frontend_dist.exists():
         file_path = (frontend_dist / full_path).resolve()
         dist_resolved = frontend_dist.resolve()
         if (
-            str(file_path).startswith(str(dist_resolved))
+            str(file_path).startswith(str(dist_resolved) + os.sep)
             and file_path.exists()
             and file_path.is_file()
         ):
