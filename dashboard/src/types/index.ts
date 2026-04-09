@@ -26,6 +26,13 @@ export interface SessionStatus {
   slug: string;
 }
 
+export interface TodayTokens {
+  input: number;
+  output: number;
+  cache_read: number;
+  cache_creation: number;
+}
+
 export interface Machine {
   id: number;
   machine_name: string;
@@ -35,6 +42,7 @@ export interface Machine {
   first_seen: string;
   latest_metrics: LatestMetrics | null;
   session_status: SessionStatus[];
+  today_tokens: TodayTokens;
 }
 
 export interface HistoryPoint {

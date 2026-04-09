@@ -8,15 +8,21 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..database import get_db
 from ..dependencies import verify_session_token
-from ..models import Machine, Telemetry
-from ..schemas import HistoryPoint, HistoryResponse, LatestMetrics, MachineOut, SessionStatusEntry
+from ..models import Machine, Telemetry, TokenUsage
+from ..schemas import (
+    HistoryPoint,
+    HistoryResponse,
+    LatestMetrics,
+    MachineOut,
+    SessionStatusEntry,
+    TodayTokens,
+)
 
 router = APIRouter(tags=["machines"], dependencies=[Depends(verify_session_token)])
 
 
 def _is_online(last_heartbeat: datetime) -> bool:
     timeout = timedelta(seconds=get_settings().heartbeat_timeout_seconds)
-    # SQLite stores naive datetimes; treat them as UTC
     if last_heartbeat.tzinfo is None:
         last_heartbeat = last_heartbeat.replace(tzinfo=timezone.utc)
     return datetime.now(timezone.utc) - last_heartbeat < timeout
@@ -38,7 +44,11 @@ def _build_latest_metrics(t: Telemetry | None) -> LatestMetrics | None:
     )
 
 
-def _machine_to_out(machine: Machine, latest: Telemetry | None) -> MachineOut:
+def _machine_to_out(
+    machine: Machine,
+    latest: Telemetry | None,
+    today_tokens: TodayTokens | None = None,
+) -> MachineOut:
     try:
         sessions = [SessionStatusEntry(**s) for s in json.loads(machine.session_status or "[]")]
     except Exception:
@@ -52,22 +62,59 @@ def _machine_to_out(machine: Machine, latest: Telemetry | None) -> MachineOut:
         first_seen=machine.first_seen,
         latest_metrics=_build_latest_metrics(latest),
         session_status=sessions,
+        today_tokens=today_tokens or TodayTokens(),
     )
 
 
 @router.get("/machines", response_model=list[MachineOut])
 def list_machines(db: Session = Depends(get_db)):
-    machines = db.query(Machine).all()
-    result = []
-    for m in machines:
-        latest = (
-            db.query(Telemetry)
-            .filter(Telemetry.machine_id == m.id)
-            .order_by(desc(Telemetry.timestamp))
-            .first()
+    # Single query: latest telemetry per machine via subquery
+    latest_sub = (
+        db.query(
+            Telemetry.machine_id,
+            func.max(Telemetry.id).label("max_id"),
         )
-        result.append(_machine_to_out(m, latest))
-    return result
+        .group_by(Telemetry.machine_id)
+        .subquery()
+    )
+
+    rows = (
+        db.query(Machine, Telemetry)
+        .outerjoin(latest_sub, Machine.id == latest_sub.c.machine_id)
+        .outerjoin(Telemetry, Telemetry.id == latest_sub.c.max_id)
+        .all()
+    )
+
+    # Today's token totals per machine (SQLite stores naive UTC datetimes)
+    today_start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+    )
+    token_rows = (
+        db.query(
+            TokenUsage.machine_id,
+            func.sum(TokenUsage.input_tokens).label("input"),
+            func.sum(TokenUsage.output_tokens).label("output"),
+            func.sum(TokenUsage.cache_read_tokens).label("cache_read"),
+            func.sum(TokenUsage.cache_creation_tokens).label("cache_creation"),
+        )
+        .filter(TokenUsage.timestamp >= today_start)
+        .group_by(TokenUsage.machine_id)
+        .all()
+    )
+    token_map = {
+        r.machine_id: TodayTokens(
+            input=r.input or 0,
+            output=r.output or 0,
+            cache_read=r.cache_read or 0,
+            cache_creation=r.cache_creation or 0,
+        )
+        for r in token_rows
+    }
+
+    return [
+        _machine_to_out(m, t, token_map.get(m.id))
+        for m, t in rows
+    ]
 
 
 @router.get("/machines/{machine_id}", response_model=MachineOut)
@@ -81,7 +128,28 @@ def get_machine(machine_id: int, db: Session = Depends(get_db)):
         .order_by(desc(Telemetry.timestamp))
         .first()
     )
-    return _machine_to_out(machine, latest)
+
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    token_row = (
+        db.query(
+            func.sum(TokenUsage.input_tokens).label("input"),
+            func.sum(TokenUsage.output_tokens).label("output"),
+            func.sum(TokenUsage.cache_read_tokens).label("cache_read"),
+            func.sum(TokenUsage.cache_creation_tokens).label("cache_creation"),
+        )
+        .filter(TokenUsage.machine_id == machine_id, TokenUsage.timestamp >= today_start)
+        .first()
+    )
+    today_tokens = None
+    if token_row and token_row.input is not None:
+        today_tokens = TodayTokens(
+            input=token_row.input or 0,
+            output=token_row.output or 0,
+            cache_read=token_row.cache_read or 0,
+            cache_creation=token_row.cache_creation or 0,
+        )
+
+    return _machine_to_out(machine, latest, today_tokens)
 
 
 @router.get("/machines/{machine_id}/history", response_model=HistoryResponse)

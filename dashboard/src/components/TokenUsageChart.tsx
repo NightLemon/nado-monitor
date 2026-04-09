@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
 import { formatHourLabel } from "@/utils/time";
+import { estimateCost, formatCost } from "@/utils/pricing";
 
 interface TokenUsageChartProps {
   machineId: number;
@@ -48,6 +49,22 @@ export function TokenUsageChart({ machineId }: TokenUsageChartProps) {
     );
   }, [data]);
 
+  const totalCost = useMemo(() => {
+    if (!data) return 0;
+    return data.by_project.reduce(
+      (sum, p) =>
+        sum +
+        estimateCost(
+          p.model,
+          p.total_input_tokens,
+          p.total_output_tokens,
+          p.total_cache_read_tokens,
+          p.total_cache_creation_tokens,
+        ),
+      0,
+    );
+  }, [data]);
+
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
       <div className="flex items-center justify-between mb-4">
@@ -58,6 +75,7 @@ export function TokenUsageChart({ machineId }: TokenUsageChartProps) {
           {totalTokens > 0 && (
             <p className="text-lg font-semibold text-slate-100 mt-1">
               {formatNumber(totalTokens)} tokens
+              <span className="ml-2 text-amber-400">{formatCost(totalCost)}</span>
             </p>
           )}
         </div>

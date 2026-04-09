@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import get_settings
 from .database import Base, engine
 from .routers import machines, telemetry, auth, token_usage
-from .tasks import cleanup_loop
+from .tasks import cleanup_loop, alert_loop
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,8 +41,16 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(
         cleanup_loop(settings.cleanup_interval_hours, settings.retention_days)
     )
+    alert_task = asyncio.create_task(
+        alert_loop(
+            settings.telegram_bot_token,
+            settings.telegram_chat_id,
+            settings.alert_waiting_minutes,
+        )
+    )
     yield
     task.cancel()
+    alert_task.cancel()
 
 
 app = FastAPI(title="Nado Monitor", version="1.0.0", lifespan=lifespan)

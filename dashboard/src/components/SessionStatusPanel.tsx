@@ -47,10 +47,9 @@ function shortModel(model: string): string {
 }
 
 function formatActivityTime(isoStr: string): string {
-  // isoStr can be "2026-04-08T15:41:01.859000+00:00" or with "Z"
   const d = toDisplayTime(isoStr.replace(/\+00:00$/, "Z"));
-  const h = d.getUTCHours().toString().padStart(2, "0");
-  const m = d.getUTCMinutes().toString().padStart(2, "0");
+  const h = d.getHours().toString().padStart(2, "0");
+  const m = d.getMinutes().toString().padStart(2, "0");
   return `${h}:${m}`;
 }
 

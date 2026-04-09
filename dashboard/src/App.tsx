@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { OverviewPage } from "@/pages/OverviewPage";
@@ -6,9 +7,16 @@ import { LoginPage } from "@/pages/LoginPage";
 import { isAuthenticated } from "@/services/api";
 
 function ProtectedRoute() {
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
+  const [authState, setAuthState] = useState<"loading" | "yes" | "no">(
+    "loading",
+  );
+
+  useEffect(() => {
+    isAuthenticated().then((ok) => setAuthState(ok ? "yes" : "no"));
+  }, []);
+
+  if (authState === "loading") return null;
+  if (authState === "no") return <Navigate to="/login" replace />;
   return <Outlet />;
 }
 

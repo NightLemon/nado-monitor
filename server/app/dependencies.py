@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import time
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
 
 from .config import get_settings
 
@@ -45,14 +45,18 @@ def _validate_session_token(token: str) -> bool:
     return hmac.compare_digest(sig, expected_sig)
 
 
-async def verify_session_token(authorization: str = Header(default="")):
+async def verify_session_token(request: Request, authorization: str = Header(default="")):
     settings = get_settings()
     if not settings.totp_secret:
         return  # Auth disabled in dev
 
-    if not authorization.startswith("Bearer "):
+    # Try cookie first, then Authorization header (backward compat)
+    token = request.cookies.get("session", "")
+    if not token and authorization.startswith("Bearer "):
+        token = authorization[7:]
+
+    if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
 
-    token = authorization[7:]
     if not _validate_session_token(token):
         raise HTTPException(status_code=401, detail="Invalid or expired token")

@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
+import { estimateCost, formatCost } from "@/utils/pricing";
 import type { TokenUsageSummary } from "@/types";
 
 interface TokenUsageByProjectProps {
@@ -15,6 +16,7 @@ interface ProjectGroup {
   totalOutput: number;
   totalCacheRead: number;
   totalCacheCreation: number;
+  totalCost: number;
   models: TokenUsageSummary[];
 }
 
@@ -54,6 +56,7 @@ export function TokenUsageByProject({
           totalOutput: 0,
           totalCacheRead: 0,
           totalCacheCreation: 0,
+          totalCost: 0,
           models: [],
         };
         map.set(row.project_path, group);
@@ -62,6 +65,13 @@ export function TokenUsageByProject({
       group.totalOutput += row.total_output_tokens;
       group.totalCacheRead += row.total_cache_read_tokens;
       group.totalCacheCreation += row.total_cache_creation_tokens;
+      group.totalCost += estimateCost(
+        row.model,
+        row.total_input_tokens,
+        row.total_output_tokens,
+        row.total_cache_read_tokens,
+        row.total_cache_creation_tokens,
+      );
       group.models.push(row);
     }
 
@@ -96,7 +106,8 @@ export function TokenUsageByProject({
               <th className="text-right py-2 pr-4">Input</th>
               <th className="text-right py-2 pr-4">Output</th>
               <th className="text-right py-2 pr-4">Cache Read</th>
-              <th className="text-right py-2">Total</th>
+              <th className="text-right py-2 pr-4">Total</th>
+              <th className="text-right py-2">Cost</th>
             </tr>
           </thead>
           <tbody>
@@ -145,8 +156,11 @@ export function TokenUsageByProject({
                     <td className="py-2.5 pr-4 text-right text-violet-400 font-medium">
                       {formatNumber(group.totalCacheRead)}
                     </td>
-                    <td className="py-2.5 text-right text-slate-100 font-semibold">
+                    <td className="py-2.5 pr-4 text-right text-slate-100 font-semibold">
                       {formatNumber(group.totalInput + group.totalOutput)}
+                    </td>
+                    <td className="py-2.5 text-right text-amber-400 font-semibold">
+                      {formatCost(group.totalCost)}
                     </td>
                   </tr>
                   {isOpen &&
@@ -175,9 +189,20 @@ export function TokenUsageByProject({
                           <td className="py-1.5 pr-4 text-right text-xs text-violet-400/70">
                             {formatNumber(m.total_cache_read_tokens)}
                           </td>
-                          <td className="py-1.5 text-right text-xs text-slate-300">
+                          <td className="py-1.5 pr-4 text-right text-xs text-slate-300">
                             {formatNumber(
                               m.total_input_tokens + m.total_output_tokens,
+                            )}
+                          </td>
+                          <td className="py-1.5 text-right text-xs text-amber-400/70">
+                            {formatCost(
+                              estimateCost(
+                                m.model,
+                                m.total_input_tokens,
+                                m.total_output_tokens,
+                                m.total_cache_read_tokens,
+                                m.total_cache_creation_tokens,
+                              ),
                             )}
                           </td>
                         </tr>

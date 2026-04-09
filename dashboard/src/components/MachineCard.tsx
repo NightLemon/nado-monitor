@@ -2,47 +2,40 @@ import { Link } from "react-router-dom";
 import { Monitor, Terminal } from "lucide-react";
 import type { Machine } from "@/types";
 import { StatusBadge } from "./StatusBadge";
+import { estimateCost, formatCost } from "@/utils/pricing";
 
 interface MachineCardProps {
   machine: Machine;
 }
 
-function MetricBar({ label, value }: { label: string; value: number }) {
-  const color =
-    value < 60 ? "bg-emerald-400" : value < 80 ? "bg-yellow-400" : "bg-red-400";
-
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-slate-400">{label}</span>
-        <span className="text-slate-300">{Math.round(value)}%</span>
-      </div>
-      <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${color}`}
-          style={{ width: `${value}%` }}
-        />
-      </div>
-    </div>
-  );
+function metricColor(v: number) {
+  return v < 60 ? "text-emerald-400" : v < 80 ? "text-yellow-400" : "text-red-400";
 }
 
 export function MachineCard({ machine }: MachineCardProps) {
   const m = machine.latest_metrics;
   const OsIcon = machine.os_type === "windows" ? Monitor : Terminal;
 
-  // Count running agent processes
-  const agentNames = ["claude", "node", "python", "code", "cursor", "docker"];
-  const runningAgents = m
-    ? [...new Set(m.processes.filter((p) => agentNames.includes(p.name)).map((p) => p.name))]
-    : [];
+  const t = machine.today_tokens;
+  const todayCost =
+    t.input + t.output > 0
+      ? estimateCost("claude-sonnet-4", t.input, t.output, t.cache_read, t.cache_creation)
+      : 0;
+
+  const sessions = machine.session_status || [];
+  const waiting = sessions.filter(
+    (s) => s.status === "waiting_tool" || s.status === "waiting_input",
+  );
+  const running = sessions.filter((s) => s.status === "running");
+  const idle = sessions.filter((s) => s.status === "idle");
 
   return (
     <Link
       to={`/machines/${machine.id}`}
       className="block bg-slate-800 rounded-xl border border-slate-700 p-5 hover:border-slate-600 transition-colors no-underline"
     >
-      <div className="flex items-start justify-between mb-4">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <OsIcon className="w-5 h-5 text-slate-400" />
           <h2 className="text-base font-semibold text-white">
@@ -54,55 +47,60 @@ export function MachineCard({ machine }: MachineCardProps) {
 
       {m ? (
         <div className="space-y-3">
-          <div className="space-y-2">
-            <MetricBar label="CPU" value={m.cpu_percent} />
-            <MetricBar label="Memory" value={m.memory_percent} />
-            <MetricBar label="Disk" value={m.disk_percent} />
+          {/* Compact metrics row */}
+          <div className="flex items-center gap-4 text-sm">
+            <span>
+              <span className="text-slate-500">CPU </span>
+              <span className={`font-medium ${metricColor(m.cpu_percent)}`}>
+                {Math.round(m.cpu_percent)}%
+              </span>
+            </span>
+            <span>
+              <span className="text-slate-500">MEM </span>
+              <span className={`font-medium ${metricColor(m.memory_percent)}`}>
+                {Math.round(m.memory_percent)}%
+              </span>
+            </span>
+            <span>
+              <span className="text-slate-500">DISK </span>
+              <span className={`font-medium ${metricColor(m.disk_percent)}`}>
+                {Math.round(m.disk_percent)}%
+              </span>
+            </span>
           </div>
 
-          {runningAgents.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {runningAgents.map((name) => (
-                <span
-                  key={name}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-xs"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  {name}
-                </span>
-              ))}
+          {/* Today cost */}
+          {todayCost > 0 && (
+            <div className="text-sm">
+              <span className="text-slate-500">Today </span>
+              <span className="text-amber-400 font-medium">
+                {formatCost(todayCost)}
+              </span>
             </div>
           )}
 
-          {machine.session_status && machine.session_status.length > 0 && (() => {
-            const waiting = machine.session_status.filter(
-              (s) => s.status === "waiting_tool" || s.status === "waiting_input",
-            );
-            const active = machine.session_status.filter(
-              (s) => s.status === "running",
-            );
-            return (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {waiting.length > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 text-xs animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    {waiting.length} waiting
-                  </span>
-                )}
-                {active.length > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    {active.length} running
-                  </span>
-                )}
-                {machine.session_status.filter((s) => s.status === "idle").length > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-500/10 text-slate-400 text-xs">
-                    {machine.session_status.filter((s) => s.status === "idle").length} idle
-                  </span>
-                )}
-              </div>
-            );
-          })()}
+          {/* Session status badges */}
+          {sessions.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {waiting.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 text-xs animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  {waiting.length} waiting
+                </span>
+              )}
+              {running.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {running.length} running
+                </span>
+              )}
+              {idle.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-500/10 text-slate-400 text-xs">
+                  {idle.length} idle
+                </span>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-sm text-slate-500">No metrics available</p>

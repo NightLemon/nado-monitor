@@ -57,6 +57,13 @@ class LatestMetrics(BaseModel):
     timestamp: datetime
 
 
+class TodayTokens(BaseModel):
+    input: int = 0
+    output: int = 0
+    cache_read: int = 0
+    cache_creation: int = 0
+
+
 class MachineOut(BaseModel):
     id: int
     machine_name: str
@@ -66,6 +73,7 @@ class MachineOut(BaseModel):
     first_seen: datetime
     latest_metrics: LatestMetrics | None = None
     session_status: list[SessionStatusEntry] = []
+    today_tokens: TodayTokens = TodayTokens()
 
     model_config = {"from_attributes": True}
 

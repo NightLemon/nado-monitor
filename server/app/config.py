@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     # Display timezone offset from UTC (hours), e.g. 8 for Asia/Shanghai
     display_timezone_offset: int = 8
 
+    # Telegram notifications
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    alert_waiting_minutes: int = 5
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

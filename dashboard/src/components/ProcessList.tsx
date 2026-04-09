@@ -1,14 +1,13 @@
 import type { ProcessInfo } from "@/types";
+import { DEFAULT_MONITORED_PROCESSES } from "@/constants";
 
 interface ProcessListProps {
   processes: ProcessInfo[];
   monitored?: string[];
 }
 
-const DEFAULT_MONITORED = ["claude", "node", "python", "code", "cursor", "docker"];
-
 export function ProcessList({ processes, monitored }: ProcessListProps) {
-  const targets = monitored ?? DEFAULT_MONITORED;
+  const targets = monitored ?? [...DEFAULT_MONITORED_PROCESSES];
 
   // Group processes by target name
   const grouped = new Map<string, ProcessInfo[]>();

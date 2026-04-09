@@ -3,15 +3,7 @@ import type { HistoryResponse, Machine, TokenUsageResponse } from "@/types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
-});
-
-// Attach session token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("session_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true, // Send cookies with requests
 });
 
 // Redirect to login on 401
@@ -19,7 +11,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("session_token");
       window.location.href = "/login";
     }
     return Promise.reject(error);
@@ -33,17 +24,25 @@ export async function login(
     "/auth/login",
     { code },
   );
-  localStorage.setItem("session_token", data.token);
   return data;
 }
 
-export function logout(): void {
-  localStorage.removeItem("session_token");
+export async function logout(): Promise<void> {
+  try {
+    await api.post("/auth/logout");
+  } catch {
+    // ignore errors
+  }
   window.location.href = "/login";
 }
 
-export function isAuthenticated(): boolean {
-  return !!localStorage.getItem("session_token");
+export async function isAuthenticated(): Promise<boolean> {
+  try {
+    await api.get("/auth/check");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function fetchMachines(): Promise<Machine[]> {

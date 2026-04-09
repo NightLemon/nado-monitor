@@ -56,13 +56,11 @@ def get_token_usage(
         for r in project_rows
     ]
 
-    # By time (hourly buckets) — apply timezone offset for display
-    offset = get_settings().display_timezone_offset
-    offset_modifier = f"+{offset} hours" if offset >= 0 else f"{offset} hours"
+    # By time (hourly buckets) — return UTC, frontend converts to local tz
     time_rows = (
         db.query(
             func.strftime(
-                "%Y-%m-%dT%H:00:00", TokenUsage.timestamp, offset_modifier
+                "%Y-%m-%dT%H:00:00", TokenUsage.timestamp
             ).label("hour"),
             func.sum(TokenUsage.input_tokens).label("total_input"),
             func.sum(TokenUsage.output_tokens).label("total_output"),
